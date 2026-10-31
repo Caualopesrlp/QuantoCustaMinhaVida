@@ -22,7 +22,7 @@ class TransactionController extends Controller
 
         return redirect()
             ->route('dashboard.monthly', ['year' => $tx->year, 'month' => $tx->month])
-            ->with('status', '✅ Lançamento registrado com sucesso!');
+            ->with('status', 'Lançamento registrado com sucesso.');
     }
 
     public function update(UpdateTransactionRequest $request, int $transaction): RedirectResponse
@@ -31,13 +31,13 @@ class TransactionController extends Controller
 
         return redirect()
             ->route('dashboard.monthly', ['year' => $tx->year, 'month' => $tx->month])
-            ->with('status', '✅ Lançamento atualizado!');
+            ->with('status', 'Lançamento atualizado.');
     }
 
     public function destroy(Request $request, int $transaction): RedirectResponse
     {
         $this->transactionService->deleteForUser($request->user(), $transaction);
 
-        return back()->with('status', '🗑️ Lançamento removido.');
+        return back()->with('status', 'Lançamento removido.');
     }
 }

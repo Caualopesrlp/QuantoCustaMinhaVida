@@ -16,6 +16,7 @@ class Category extends Model
 
     protected $fillable = [
         'user_id',
+        'group_name',
         'name',
         'color',
         'icon',
@@ -31,6 +32,13 @@ class Category extends Model
             'sort_order' => 'integer',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function resolvedGroupName(): string
+    {
+        $group = trim((string) $this->group_name);
+
+        return $group !== '' ? $group : $this->type->defaultGroupName();
     }
 
     public function user(): BelongsTo

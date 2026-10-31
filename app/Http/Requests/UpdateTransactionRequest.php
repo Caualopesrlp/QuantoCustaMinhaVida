@@ -23,6 +23,7 @@ class UpdateTransactionRequest extends FormRequest
     {
         return [
             'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'expense_type_id' => ['nullable', 'integer', 'exists:expense_types,id'],
             'occurred_on' => ['nullable', 'date'],
             'description' => ['required', 'string', 'max:150'],
             'amount' => [

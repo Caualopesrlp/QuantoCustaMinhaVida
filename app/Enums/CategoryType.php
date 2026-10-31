@@ -14,20 +14,35 @@ enum CategoryType: string
     public function label(): string
     {
         return match ($this) {
-            self::Income => '💰 Receita',
-            self::FixedExpense => '📌 Despesa Fixa (Necessidades)',
-            self::VariableExpense => '🔄 Despesa Variável (Desejos)',
-            self::Investment => '📈 Investimento (Futuro)',
+            self::Income => 'Receitas',
+            self::FixedExpense => 'Despesas Fixas',
+            self::VariableExpense => 'Despesas Variáveis',
+            self::Investment => 'Investimentos',
+        };
+    }
+
+    public function defaultGroupName(): string
+    {
+        return $this->label();
+    }
+
+    public function natureLabel(): string
+    {
+        return match ($this) {
+            self::Income => 'Entrada (Soma na Receita)',
+            self::FixedExpense => 'Saída Fixa (Despesa Fixa)',
+            self::VariableExpense => 'Saída Variável (Despesa Variável)',
+            self::Investment => 'Investimento (Aporte / Reserva)',
         };
     }
 
     public function shortLabel(): string
     {
         return match ($this) {
-            self::Income => 'Receita',
-            self::FixedExpense => 'Fixas',
-            self::VariableExpense => 'Variáveis',
-            self::Investment => 'Investimentos',
+            self::Income => 'Entrada',
+            self::FixedExpense => 'Fixa',
+            self::VariableExpense => 'Variável',
+            self::Investment => 'Investimento',
         };
     }
 
@@ -35,9 +50,9 @@ enum CategoryType: string
     {
         return match ($this) {
             self::Income => 'emerald',
-            self::FixedExpense => 'blue',
+            self::FixedExpense => 'sky',
             self::VariableExpense => 'amber',
-            self::Investment => 'indigo',
+            self::Investment => 'teal',
         };
     }
 }

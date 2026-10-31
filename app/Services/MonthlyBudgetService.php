@@ -18,18 +18,13 @@ class MonthlyBudgetService
     ) {}
 
     /**
-     * Garante que o mês especificado seja inicializado automaticamente com o molde recorrente ativo
-     * caso ainda esteja vazio (sem lançamentos registrados no mês).
+     * Garante que todos os itens ativos do Molde Mensal existam no mês especificado ao abri-lo,
+     * injetando automaticamente qualquer item recorrente ainda ausente no mês.
      *
      * @return int Quantidade de lançamentos injetados automaticamente
      */
     public function ensureMonthInitialized(int $userId, int $year, int $month): int
     {
-        $existingMonthTransactions = $this->transactionRepository->getByMonth($userId, $year, $month);
-        if ($existingMonthTransactions->isNotEmpty()) {
-            return 0;
-        }
-
         $activeTemplates = $this->recurringTemplateRepository->getAllByUser($userId, onlyActive: true);
         if ($activeTemplates->isEmpty()) {
             return 0;

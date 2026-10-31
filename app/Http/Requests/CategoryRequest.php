@@ -21,11 +21,15 @@ class CategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:100'],
+            'group_name' => ['nullable', 'string', 'max:100'],
+            'name' => ['required_without:items', 'nullable', 'string', 'max:100'],
+            'color' => ['nullable', 'string', 'max:20'],
             'icon' => ['nullable', 'string', 'max:20'],
-            'type' => ['required', new Enum(CategoryType::class)],
+            'type' => ['sometimes', 'required', new Enum(CategoryType::class)],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
             'is_active' => ['nullable', 'boolean'],
+            'items' => ['nullable'],
+            'expense_types' => ['nullable'],
         ];
     }
 }

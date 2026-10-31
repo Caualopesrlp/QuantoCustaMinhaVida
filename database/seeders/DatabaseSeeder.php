@@ -19,11 +19,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(SpreadsheetImportService $importService): void
     {
+        $this->call(AdminUserSeeder::class);
+
         $user = User::query()->updateOrCreate(
             ['email' => 'caualopes.icm@gmail.com'],
             [
                 'name' => 'Cauã Lopes',
                 'password' => Hash::make('password'),
+                'role' => 'admin',
+                'is_admin' => true,
                 'rule_needs_pct' => 50,
                 'rule_wants_pct' => 30,
                 'rule_investments_pct' => 20,

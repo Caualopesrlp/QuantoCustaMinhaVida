@@ -23,6 +23,7 @@ class StoreTransactionRequest extends FormRequest
     {
         return [
             'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'expense_type_id' => ['nullable', 'integer', 'exists:expense_types,id'],
             'year' => ['required', 'integer', 'min:2000', 'max:2100'],
             'month' => ['required', 'integer', 'min:1', 'max:12'],
             'occurred_on' => ['nullable', 'date'],

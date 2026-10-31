@@ -31,13 +31,8 @@ class MonthlyDashboardController extends Controller
             month: $resolvedMonth
         );
 
-        $recurringTemplatesCount = $this->recurringTemplateService
-            ->listForUser($request->user(), onlyActive: true)
-            ->count();
-
         return view('dashboard.monthly', [
             'dashboard' => $dashboard,
-            'recurringTemplatesCount' => $recurringTemplatesCount,
             'monthNames' => MonthlySummaryService::MONTH_NAMES,
         ]);
     }
@@ -51,8 +46,8 @@ class MonthlyDashboardController extends Controller
         );
 
         $message = $created > 0
-            ? "✅ {$created} lançamento(s) fixo(s) do Modelo Base (X26) aplicado(s) no mês!"
-            : 'ℹ️ Todos os lançamentos fixos do Modelo Base já estavam aplicados neste mês.';
+            ? "{$created} lançamento(s) do Molde Mensal aplicado(s) no mês."
+            : 'Todos os lançamentos do Molde Mensal já estavam aplicados neste mês.';
 
         return redirect()
             ->route('dashboard.monthly', ['year' => $year, 'month' => $month])

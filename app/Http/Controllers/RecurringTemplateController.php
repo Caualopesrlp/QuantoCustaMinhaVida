@@ -23,6 +23,7 @@ class RecurringTemplateController extends Controller
     {
         $templates = $this->recurringTemplateService->listForUser($request->user());
         $categories = $this->categoryService->listForUser($request->user(), onlyActive: true);
+        $groupedCategories = $this->categoryService->listGroupedForUser($request->user(), onlyActive: true);
 
         $incomeTotalCents = (int) $templates
             ->where('is_active', true)
@@ -31,12 +32,13 @@ class RecurringTemplateController extends Controller
 
         $fixedTotalCents = (int) $templates
             ->where('is_active', true)
-            ->filter(fn ($t) => $t->category?->type === CategoryType::FixedExpense)
+            ->filter(fn ($t) => $t->category?->type !== CategoryType::Income)
             ->sum('amount_cents');
 
         return view('recurring.index', [
             'templates' => $templates,
             'categories' => $categories,
+            'groupedCategories' => $groupedCategories,
             'incomeTotalCents' => $incomeTotalCents,
             'fixedTotalCents' => $fixedTotalCents,
         ]);
@@ -48,7 +50,7 @@ class RecurringTemplateController extends Controller
 
         return redirect()
             ->route('recurring-templates.index')
-            ->with('status', '✅ Item recorrente adicionado ao Modelo Fixo (X26)!');
+            ->with('status', 'Item adicionado ao Molde Mensal.');
     }
 
     public function update(RecurringTemplateRequest $request, int $recurringTemplate): RedirectResponse
@@ -60,7 +62,7 @@ class RecurringTemplateController extends Controller
 
         return redirect()
             ->route('recurring-templates.index')
-            ->with('status', '✅ Item recorrente atualizado!');
+            ->with('status', 'Item do Molde Mensal atualizado.');
     }
 
     public function destroy(Request $request, int $recurringTemplate): RedirectResponse
@@ -69,6 +71,6 @@ class RecurringTemplateController extends Controller
 
         return redirect()
             ->route('recurring-templates.index')
-            ->with('status', '🗑️ Item recorrente removido do Modelo Fixo.');
+            ->with('status', 'Item removido do Molde Mensal.');
     }
 }

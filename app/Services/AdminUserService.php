@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminUserService
 {
-    public const DEFAULT_TEMP_PASSWORD = 'Mudar123!';
+    public const DEFAULT_TEMP_PASSWORD = '12345678';
 
     public function __construct(
         private readonly UserRepositoryInterface $userRepository,
@@ -52,7 +52,7 @@ class AdminUserService
     }
 
     /**
-     * Redefine a senha do usuário para uma senha padrão temporária (ex: Mudar123!).
+     * Redefine a senha do usuário para a senha padrão (12345678).
      */
     public function resetPassword(User $user, string $defaultPassword = self::DEFAULT_TEMP_PASSWORD): string
     {

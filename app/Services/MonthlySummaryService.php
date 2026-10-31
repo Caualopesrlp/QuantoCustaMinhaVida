@@ -37,14 +37,15 @@ class MonthlySummaryService
     ) {}
 
     /**
-     * Retorna todos os dados consolidados do mês (Resumo, % da Renda, Regra 50-30-20, Saldo Acumulado e Grupos por Categoria).
-     * Inicializa automaticamente o mês com o molde recorrente caso esteja vazio.
+     * Retorna todos os dados consolidados do mês (Resumo, % da Renda, Regra 50-30-20, Saldo Acumulado e Blocos de Categorias).
+     * Garante automaticamente que os itens ativos do Molde Mensal estejam presentes no mês.
      *
      * @return array<string, mixed>
      */
     public function getMonthlyDashboard(User $user, int $year, int $month): array
     {
         $categories = $this->categoryService->listForUser($user);
+        $groupedCategories = $this->categoryService->listGroupedForUser($user);
         $autoInjectedCount = $this->monthlyBudgetService->ensureMonthInitialized((int) $user->id, $year, $month);
         $transactions = $this->transactionRepository->getByMonth((int) $user->id, $year, $month);
 
@@ -71,12 +72,21 @@ class MonthlySummaryService
 
         $accumulatedBalanceCents = $this->calculateAccumulatedBalanceUpTo((int) $user->id, $year, $month);
 
-        $blocks = [
-            CategoryType::Income->value => $this->buildBlockGroup($categories, $transactions, CategoryType::Income),
-            CategoryType::FixedExpense->value => $this->buildBlockGroup($categories, $transactions, CategoryType::FixedExpense),
-            CategoryType::VariableExpense->value => $this->buildBlockGroup($categories, $transactions, CategoryType::VariableExpense),
-            CategoryType::Investment->value => $this->buildBlockGroup($categories, $transactions, CategoryType::Investment),
-        ];
+        $blocks = [];
+        foreach ($groupedCategories as $groupName => $groupMeta) {
+            $block = $this->buildBlockForGroup(
+                groupName: (string) $groupName,
+                type: $groupMeta['type'],
+                color: $groupMeta['color'],
+                isDefault: $groupMeta['is_default'],
+                groupCategories: $groupMeta['items'],
+                transactions: $transactions,
+            );
+
+            if ($block !== null) {
+                $blocks[(string) $groupName] = $block;
+            }
+        }
 
         return [
             'year' => $year,
@@ -106,7 +116,7 @@ class MonthlySummaryService
     }
 
     /**
-     * Consolida a aba "Investimentos 📈" e o balanço anual de Janeiro a Dezembro.
+     * Consolida os dados anuais de Investimentos e o Resumo Anual de Janeiro a Dezembro.
      *
      * @return array<string, mixed>
      */
@@ -119,6 +129,8 @@ class MonthlySummaryService
         $totalAnnualIncomeCents = 0;
         $totalAnnualFixedCents = 0;
         $totalAnnualVariableCents = 0;
+        $monthsWithInvestment = 0;
+        $allInvestmentTransactions = collect();
 
         for ($m = 1; $m <= 12; $m++) {
             $monthTxs = $yearTransactions->where('month', $m);
@@ -136,6 +148,10 @@ class MonthlySummaryService
 
             if ($hasInvestment) {
                 $accumulatedInvestedCents += $monthInvestedCents;
+                $monthsWithInvestment++;
+                foreach ($investmentTxs as $invTx) {
+                    $allInvestmentTransactions->push($invTx);
+                }
             }
 
             $totalAnnualIncomeCents += $monthIncome;
@@ -172,9 +188,21 @@ class MonthlySummaryService
             ];
         }
 
+        $averageMonthlyInvestmentCents = $monthsWithInvestment > 0
+            ? (int) round($accumulatedInvestedCents / $monthsWithInvestment)
+            : 0;
+
+        $investmentShareOfIncomePct = $totalAnnualIncomeCents > 0
+            ? round(($accumulatedInvestedCents / $totalAnnualIncomeCents) * 100, 1)
+            : 0.0;
+
         return [
             'year' => $year,
             'months' => $months,
+            'investment_transactions' => $allInvestmentTransactions,
+            'months_with_investment' => $monthsWithInvestment,
+            'average_monthly_invested_cents' => $averageMonthlyInvestmentCents,
+            'investment_share_pct' => $investmentShareOfIncomePct,
             'total_invested_cents' => $accumulatedInvestedCents,
             'total_income_cents' => $totalAnnualIncomeCents,
             'total_fixed_cents' => $totalAnnualFixedCents,
@@ -199,14 +227,14 @@ class MonthlySummaryService
     public function resolveBalanceStatus(int $balanceCents): array
     {
         if ($balanceCents > 0) {
-            return ['badge' => '✅ Sobrando 😊', 'color' => 'emerald'];
+            return ['badge' => 'Sobrando', 'color' => 'emerald'];
         }
 
         if ($balanceCents < 0) {
-            return ['badge' => '⚠️ No vermelho', 'color' => 'rose'];
+            return ['badge' => 'No vermelho', 'color' => 'rose'];
         }
 
-        return ['badge' => '🟰 Zero a zero', 'color' => 'slate'];
+        return ['badge' => 'Zero a zero', 'color' => 'slate'];
     }
 
     private function calculateAccumulatedBalanceUpTo(int $userId, int $year, int $month): int
@@ -222,30 +250,23 @@ class MonthlySummaryService
     }
 
     /**
-     * @param Collection<int, Category> $categories
+     * @param Collection<int, Category> $groupCategories
      * @param Collection<int, Transaction> $transactions
-     * @return array{
-     *   type: CategoryType,
-     *   label: string,
-     *   subtotal_cents: int,
-     *   categories: Collection<int, array{
-     *     category: Category,
-     *     subtotal_cents: int,
-     *     notes_summary: string,
-     *     transactions: Collection<int, Transaction>
-     *   }>
-     * }
+     * @return array<string, mixed>|null
      */
-    private function buildBlockGroup(Collection $categories, Collection $transactions, CategoryType $type): array
-    {
-        $typeCategories = $categories->filter(fn (Category $cat) => $cat->type === $type)->values();
-
-        $groupedCategories = $typeCategories->map(function (Category $category) use ($transactions): ?array {
+    private function buildBlockForGroup(
+        string $groupName,
+        CategoryType $type,
+        string $color,
+        bool $isDefault,
+        Collection $groupCategories,
+        Collection $transactions,
+    ): ?array {
+        $groupedCategories = $groupCategories->map(function (Category $category) use ($transactions): ?array {
             $catTransactions = $transactions
                 ->where('category_id', $category->id)
                 ->values();
 
-            // Oculta categorias inativas que não possuem lançamentos neste mês
             if (! $category->is_active && $catTransactions->isEmpty()) {
                 return null;
             }
@@ -272,9 +293,17 @@ class MonthlySummaryService
             ];
         })->filter()->values();
 
+        if (! $isDefault && $groupedCategories->isEmpty()) {
+            return null;
+        }
+
         return [
+            'group_name' => $groupName,
             'type' => $type,
-            'label' => $type->label(),
+            'color' => $color,
+            'is_default' => $isDefault,
+            'label' => $groupName,
+            'nature_label' => $type->shortLabel(),
             'subtotal_cents' => (int) $groupedCategories->sum('subtotal_cents'),
             'categories' => $groupedCategories,
         ];
